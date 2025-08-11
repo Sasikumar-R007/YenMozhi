@@ -1,142 +1,565 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Voice Classifier</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/speech-commands@0.4.0/dist/speech-commands.min.js"></script>
-    <style>
-      body {
-        background: #121212;
-        color: white;
-        font-family: "Segoe UI", sans-serif;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        padding: 40px 20px;
-      }
+  <!DOCTYPE html>
+  <html lang="en">
+    <head>
+      <meta charset="utf-8" />
+      <meta name="viewport" content="width=device-width,initial-scale=1" />
+      <title>Voice Classifier — Voice Output + Talking Avatar</title>
 
-      h1 {
-        font-size: 28px;
-        margin-bottom: 20px;
-        text-align: center;
-        color: #00e676;
-      }
+      <!-- TF and speech-commands (same as your working setup) -->
+      <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
+      <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/speech-commands@0.4.0/dist/speech-commands.min.js"></script>
 
-      button {
-        padding: 12px 24px;
-        font-size: 16px;
-        background: #00e676;
-        border: none;
-        border-radius: 8px;
-        color: #000;
-        font-weight: bold;
-        cursor: pointer;
-        margin-bottom: 30px;
-        transition: background 0.3s;
-      }
-
-      button:hover {
-        background: #00c853;
-      }
-
-      #label-container {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        margin-bottom: 40px;
-        background: #1e1e1e;
-        padding: 20px;
-        border-radius: 10px;
-        width: 100%;
-        max-width: 400px;
-      }
-
-      .label-line {
-        font-size: 16px;
-      }
-
-      #top-label {
-        font-size: 32px;
-        font-weight: bold;
-        color: #ffd600;
-        background: #1a1a1a;
-        padding: 20px 30px;
-        border-radius: 12px;
-        box-shadow: 0 0 10px rgba(255, 214, 0, 0.4);
-        margin-top: 10px;
-        text-align: center;
-      }
-    </style>
-  </head>
-  <body>
-    <h1>🎙️ Voice Command Recognition</h1>
-    <button onclick="init()">Start Listening</button>
-    <div id="label-container"></div>
-    <div id="top-label">Waiting for Input...</div>
-
-    <script type="text/javascript">
-      const URL = "https://teachablemachine.withgoogle.com/models/GmzaS6iNB/";
-
-      async function createModel() {
-        const checkpointURL = URL + "model.json";
-        const metadataURL = URL + "metadata.json";
-
-        const recognizer = speechCommands.create(
-          "BROWSER_FFT",
-          undefined,
-          checkpointURL,
-          metadataURL
-        );
-
-        await recognizer.ensureModelLoaded();
-        return recognizer;
-      }
-
-      async function init() {
-        const recognizer = await createModel();
-        const classLabels = recognizer.wordLabels();
-        const labelContainer = document.getElementById("label-container");
-        const topLabelDisplay = document.getElementById("top-label");
-
-        labelContainer.innerHTML = "";
-        for (let i = 0; i < classLabels.length; i++) {
-          const div = document.createElement("div");
-          div.className = "label-line";
-          labelContainer.appendChild(div);
+      <style>
+        :root {
+          --bg: #0f1720;
+          --card: #111318;
+          --accent: #00e676;
+          --muted: #9aa0a6;
+          --glass: rgba(255, 255, 255, 0.03);
         }
 
-        recognizer.listen(
-          (result) => {
-            const scores = result.scores;
-            let maxScore = -1;
-            let maxIndex = -1;
+        * {
+          box-sizing: border-box;
+        }
+        body {
+          margin: 0;
+          min-height: 100vh;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: flex-start;
+          gap: 18px;
+          padding: 36px 18px;
+          background: linear-gradient(180deg, #07101a 0%, #09121a 100%);
+          color: #e6eef6;
+          font-family: Inter, "Segoe UI", system-ui, -apple-system,
+            "Helvetica Neue", Arial;
+        }
 
-            for (let i = 0; i < classLabels.length; i++) {
-              const score = scores[i];
-              const text = `${classLabels[i]}: ${score.toFixed(2)}`;
-              labelContainer.childNodes[i].innerText = text;
+        header {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 8px;
+        }
+        h1 {
+          margin: 0;
+          font-size: 22px;
+          color: var(--accent);
+          letter-spacing: 0.2px;
+        }
+        p.sub {
+          margin: 0;
+          color: var(--muted);
+          font-size: 13px;
+        }
 
-              if (score > maxScore) {
-                maxScore = score;
-                maxIndex = i;
-              }
+        .controls {
+          display: flex;
+          gap: 12px;
+          align-items: center;
+        }
+        button.primary {
+          background: var(--accent);
+          border: none;
+          padding: 10px 18px;
+          border-radius: 10px;
+          font-weight: 700;
+          color: #000;
+          cursor: pointer;
+          box-shadow: 0 6px 18px rgba(0, 230, 118, 0.12);
+          transition: transform 0.12s ease, filter 0.12s;
+        }
+        button.primary:active {
+          transform: translateY(1px);
+        }
+        button.ghost {
+          background: transparent;
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          padding: 8px 12px;
+          border-radius: 10px;
+          color: var(--muted);
+          cursor: pointer;
+        }
+
+        .layout {
+          display: flex;
+          gap: 24px;
+          width: 100%;
+          max-width: 1000px;
+          align-items: flex-start;
+          justify-content: center;
+        }
+        .left,
+        .right {
+          background: var(--card);
+          border-radius: 14px;
+          padding: 18px;
+          box-shadow: 0 6px 30px rgba(4, 8, 12, 0.6);
+        }
+        .left {
+          flex: 1;
+          min-width: 300px;
+          max-width: 520px;
+        }
+        .right {
+          width: 320px;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          align-items: center;
+        }
+
+        /* label list */
+        #label-container {
+          display: grid;
+          grid-template-columns: 1fr 80px;
+          gap: 8px;
+          align-items: center;
+        }
+        .label-name {
+          font-size: 14px;
+          color: #cfe7db;
+        }
+        .label-bar {
+          height: 8px;
+          background: var(--glass);
+          border-radius: 6px;
+          overflow: hidden;
+          position: relative;
+        }
+        .label-fill {
+          position: absolute;
+          left: 0;
+          top: 0;
+          bottom: 0;
+          width: 0%;
+          background: linear-gradient(90deg, var(--accent), #ffd600);
+          border-radius: 6px;
+          transition: width 150ms linear;
+        }
+
+        /* top label box */
+        #top-label {
+          margin-top: 16px;
+          width: 100%;
+          background: linear-gradient(
+            180deg,
+            rgba(255, 255, 255, 0.02),
+            rgba(255, 255, 255, 0.01)
+          );
+          padding: 18px;
+          border-radius: 12px;
+          text-align: center;
+          font-size: 30px;
+          font-weight: 700;
+          color: #fff;
+          box-shadow: 0 10px 30px rgba(2, 6, 10, 0.6);
+          transition: transform 0.22s cubic-bezier(0.2, 0.9, 0.3, 1),
+            box-shadow 0.22s;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 8px;
+        }
+        #top-label.pulse {
+          transform: scale(1.05);
+          box-shadow: 0 18px 40px rgba(0, 230, 118, 0.12);
+        }
+
+        #confidence-small {
+          font-size: 13px;
+          color: var(--muted);
+        }
+
+        /* avatar */
+        .avatar-wrap {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 12px;
+          padding: 14px;
+        }
+        .avatar {
+          width: 180px;
+          height: 180px;
+          border-radius: 14px;
+          background: linear-gradient(180deg, #0b0f12, #0d1216);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 12px 40px rgba(2, 6, 10, 0.6);
+          position: relative;
+          overflow: hidden;
+        }
+        /* simple face SVG container */
+        .avatar svg {
+          width: 120px;
+          height: 120px;
+          display: block;
+        }
+        /* mouth animation when talking */
+        .mouth {
+          transform-origin: center;
+          transition: transform 0.08s linear;
+        }
+        .talking .mouth {
+          animation: mouthOpen 160ms infinite linear;
+        }
+        @keyframes mouthOpen {
+          0% {
+            transform: scaleY(1);
+          }
+          50% {
+            transform: scaleY(0.25);
+          }
+          100% {
+            transform: scaleY(1);
+          }
+        }
+
+        .status-dot {
+          width: 10px;
+          height: 10px;
+          border-radius: 50%;
+          background: var(--muted);
+        }
+        .status-dot.listening {
+          background: var(--accent);
+          box-shadow: 0 6px 18px rgba(0, 230, 118, 0.08);
+        }
+
+        footer {
+          margin-top: 10px;
+          color: var(--muted);
+          font-size: 13px;
+        }
+        @media (max-width: 860px) {
+          .layout {
+            flex-direction: column;
+            align-items: center;
+          }
+          .right {
+            width: 100%;
+          }
+        }
+      </style>
+    </head>
+    <body>
+      <header>
+        <h1>🎙️ Voice Command — Speak & Display</h1>
+        <p class="sub">
+          Recognizes voice classes and speaks the detected text. Avatar animates
+          while speaking.
+        </p>
+      </header>
+
+      <div class="controls">
+        <button class="primary" id="btnStart">Start Listening</button>
+        <button class="ghost" id="btnStop">Stop</button>
+        <div
+          style="display: flex; align-items: center; gap: 10px; margin-left: 8px"
+        >
+          <div class="status-dot" id="statusDot"></div>
+          <div style="font-size: 13px; color: var(--muted)">Microphone</div>
+        </div>
+      </div>
+
+      <div class="layout">
+        <div class="left">
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+            "
+          >
+            <div style="font-size: 15px; color: var(--muted)">
+              Live class confidences
+            </div>
+            <div style="font-size: 12px; color: var(--muted)">
+              Threshold: <span id="thrLabel">0.75</span>
+            </div>
+          </div>
+
+          <div id="label-container" style="margin-top: 12px">
+            <!-- labels inserted here -->
+          </div>
+
+          <div id="top-label" style="margin-top: 18px">
+            <div id="topText">Waiting for input...</div>
+            <div id="confidence-small">—</div>
+          </div>
+        </div>
+
+        <div class="right">
+          <div class="avatar-wrap">
+            <div class="avatar" id="avatar">
+              <!-- inline SVG face -->
+              <svg
+                viewBox="0 0 120 120"
+                xmlns="http://www.w3.org/2000/svg"
+                aria-hidden="true"
+              >
+                <defs>
+                  <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0" stop-color="#1b7a6b" />
+                    <stop offset="1" stop-color="#00e676" />
+                  </linearGradient>
+                </defs>
+
+                <!-- face / head -->
+                <circle cx="60" cy="60" r="48" fill="#0e1416" />
+                <!-- eyes -->
+                <g fill="#dbeee7" opacity="0.95">
+                  <ellipse cx="44" cy="52" rx="6" ry="7"></ellipse>
+                  <ellipse cx="76" cy="52" rx="6" ry="7"></ellipse>
+                </g>
+                <!-- mouth group - scaleY to animate -->
+                <g transform="translate(60,78)">
+                  <rect
+                    x="-14"
+                    y="-2"
+                    width="28"
+                    height="10"
+                    rx="5"
+                    fill="#ffb4b4"
+                    class="mouth"
+                    id="mouthRect"
+                  ></rect>
+                </g>
+
+                <!-- small decorative -->
+                <circle
+                  cx="60"
+                  cy="60"
+                  r="48"
+                  fill="none"
+                  stroke="rgba(255,255,255,0.02)"
+                />
+              </svg>
+            </div>
+
+            <div style="text-align: center">
+              <div id="speakText" style="font-weight: 700"></div>
+              <div style="font-size: 13px; color: var(--muted); margin-top: 6px">
+                Avatar
+              </div>
+            </div>
+          </div>
+
+          <div style="width: 100%; text-align: center; margin-top: 8px">
+            <label style="font-size: 13px; color: var(--muted)">Voice</label>
+            <select
+              id="voiceSelect"
+              style="
+                width: 100%;
+                margin-top: 6px;
+                padding: 8px;
+                border-radius: 8px;
+                background: #222; /* Dark background */
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                color: #fff;
+              "
+            ></select>
+          </div>
+        </div>
+      </div>
+
+      <footer>Project: voice-reg-modal • Built with Teachable Machine</footer>
+
+      <script>
+        // ----- CONFIG -----
+        const MODEL_URL =
+          "https://teachablemachine.withgoogle.com/models/GmzaS6iNB/";
+        let recognizer = null;
+        let classLabels = [];
+        let threshold = 0.75;
+        let lastSpoken = "";
+        let lastSpokenTime = 0;
+        const cooldown = 1600; // ms between spoken outputs
+
+        // DOM refs
+        const btnStart = document.getElementById("btnStart");
+        const btnStop = document.getElementById("btnStop");
+        const statusDot = document.getElementById("statusDot");
+        const labelContainer = document.getElementById("label-container");
+        const topLabel = document.getElementById("top-label");
+        const topText = document.getElementById("topText");
+        const confSmall = document.getElementById("confidence-small");
+        const avatar = document.getElementById("avatar");
+        const speakText = document.getElementById("speakText");
+        const voiceSelect = document.getElementById("voiceSelect");
+        document.getElementById("thrLabel").innerText = threshold;
+
+        // Speech synthesis helpers
+        let voices = [];
+        function populateVoices() {
+          voices = speechSynthesis.getVoices() || [];
+          voiceSelect.innerHTML = "";
+          voices.forEach((v, i) => {
+            const opt = document.createElement("option");
+            opt.value = i;
+            opt.innerText = `${v.name} ${v.lang ? "(" + v.lang + ")" : ""}`;
+            voiceSelect.appendChild(opt);
+          });
+        }
+        window.speechSynthesis.onvoiceschanged = populateVoices;
+
+        function speak(text) {
+          if (!("speechSynthesis" in window)) return;
+          const now = Date.now();
+          if (now - lastSpokenTime < cooldown && text === lastSpoken) return; // cooldown for same text
+
+          const ut = new SpeechSynthesisUtterance(text);
+          const selected = voiceSelect.value;
+          if (voices.length && selected !== "") ut.voice = voices[selected];
+          ut.pitch = 1;
+          ut.rate = 1;
+          ut.volume = 1;
+
+          // animate avatar during speech
+          avatar.classList.add("talking");
+          speakText.innerText = text;
+
+          ut.onend = () => {
+            avatar.classList.remove("talking");
+            // clear text after short delay
+            setTimeout(() => {
+              if (speakText.innerText === text) speakText.innerText = "";
+            }, 400);
+          };
+          speechSynthesis.cancel(); // stop any pending
+          speechSynthesis.speak(ut);
+
+          lastSpoken = text;
+          lastSpokenTime = now;
+        }
+
+        // create and load model
+        async function createModel() {
+          const checkpointURL = MODEL_URL + "model.json";
+          const metadataURL = MODEL_URL + "metadata.json";
+
+          const rec = speechCommands.create(
+            "BROWSER_FFT",
+            undefined,
+            checkpointURL,
+            metadataURL
+          );
+          await rec.ensureModelLoaded();
+          return rec;
+        }
+
+        // build label UI rows
+        function buildLabelUI(labels) {
+          labelContainer.innerHTML = "";
+          labels.forEach((lbl, i) => {
+            const name = document.createElement("div");
+            name.className = "label-name";
+            name.innerText = lbl;
+            const barWrap = document.createElement("div");
+            barWrap.className = "label-bar";
+            const fill = document.createElement("div");
+            fill.className = "label-fill";
+            fill.id = "fill-" + i;
+            barWrap.appendChild(fill);
+
+            // Append as two-column pair
+            const left = document.createElement("div");
+            left.style.gridColumn = "1 / 2";
+            left.appendChild(name);
+
+            const right = document.createElement("div");
+            right.style.gridColumn = "2 / 3";
+            right.appendChild(barWrap);
+
+            labelContainer.appendChild(name);
+            labelContainer.appendChild(barWrap);
+          });
+        }
+
+        // Start recognition
+        async function startListening() {
+          try {
+            if (!recognizer) {
+              recognizer = await createModel();
+              classLabels = recognizer.wordLabels();
+              buildLabelUI(classLabels);
             }
 
-            // Show the most likely command dynamically
-            topLabelDisplay.innerText = `${
-              classLabels[maxIndex]
-            } (${maxScore.toFixed(2)})`;
-          },
-          {
-            includeSpectrogram: true,
-            probabilityThreshold: 0.75,
-            invokeCallbackOnNoiseAndUnknown: true,
-            overlapFactor: 0.5,
+            // start listening
+            recognizer.listen(
+              (result) => {
+                // result.scores is an array of probabilities matching classLabels
+                const scores = result.scores;
+                // update bars and compute top
+                let maxIdx = 0;
+                let maxVal = -1;
+                for (let i = 0; i < scores.length; i++) {
+                  const val = scores[i];
+                  const fillEl = document.getElementById("fill-" + i);
+                  if (fillEl)
+                    fillEl.style.width =
+                      Math.max(0, Math.min(100, val * 100)) + "%";
+                  if (val > maxVal) {
+                    maxVal = val;
+                    maxIdx = i;
+                  }
+                }
+
+                // update top label UI
+                topText.innerText = `${classLabels[maxIdx]}`;
+                confSmall.innerText = `${(maxVal * 100).toFixed(2)}%`;
+                // pulse animation
+                topLabel.classList.add("pulse");
+                setTimeout(() => topLabel.classList.remove("pulse"), 280);
+
+                // speak when confident and changed
+                if (maxVal >= threshold) {
+                  const labelToSpeak = classLabels[maxIdx];
+                  // speak only if changed or cooldown passed
+                  if (
+                    labelToSpeak !== lastSpoken ||
+                    Date.now() - lastSpokenTime > cooldown
+                  ) {
+                    speak(labelToSpeak);
+                  }
+                }
+              },
+              {
+                includeSpectrogram: true,
+                probabilityThreshold: 0.01, // we manage threshold manually per topVal
+                overlapFactor: 0.5,
+                invokeCallbackOnNoiseAndUnknown: true,
+              }
+            );
+
+            statusDot.classList.add("listening");
+          } catch (err) {
+            console.error("Model error:", err);
+            alert("Failed to load model. Check console.");
           }
-        );
-      }
-    </script>
-  </body>
-</html>
+        }
+
+        // stop listening
+        function stopListening() {
+          if (recognizer) recognizer.stopListening();
+          statusDot.classList.remove("listening");
+          avatar.classList.remove("talking");
+          speakText.innerText = "";
+        }
+
+        // wire UI
+        btnStart.addEventListener("click", async () => {
+          // request a voice list early
+          populateVoices();
+          await startListening();
+        });
+        btnStop.addEventListener("click", stopListening);
+
+        // initial voice fill
+        populateVoices();
+      </script>
+    </body>
+  </html>
