@@ -1,264 +1,346 @@
-  <!DOCTYPE html>
-  <html lang="en">
-    <head>
-      <meta charset="utf-8" />
-      <meta name="viewport" content="width=device-width,initial-scale=1" />
-      <title>Voice Classifier — Voice Output + Talking Avatar</title>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>YenMozhi — Voice Recognition & Avatar</title>
 
-      <!-- TF and speech-commands (same as your working setup) -->
-      <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
-      <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/speech-commands@0.4.0/dist/speech-commands.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/speech-commands@0.4.0/dist/speech-commands.min.js"></script>
 
-      <style>
-        :root {
-          --bg: #0f1720;
-          --card: #111318;
-          --accent: #00e676;
-          --muted: #9aa0a6;
-          --glass: rgba(255, 255, 255, 0.03);
-        }
+    <style>
+      :root {
+        --bg: #0f1720;
+        --card: #111318;
+        --accent: #00e676;
+        --muted: #9aa0a6;
+        --glass: rgba(255, 255, 255, 0.03);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        padding: 36px;
+        background: linear-gradient(180deg, #07101a 0%, #09121a 100%);
+        color: #e6eef6;
+        font-family: Inter, "Segoe UI", system-ui, -apple-system,
+          "Helvetica Neue", Arial;
+        align-items: center;
+      }
 
-        * {
-          box-sizing: border-box;
-        }
-        body {
-          margin: 0;
-          min-height: 100vh;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: flex-start;
-          gap: 18px;
-          padding: 36px 18px;
-          background: linear-gradient(180deg, #07101a 0%, #09121a 100%);
-          color: #e6eef6;
-          font-family: Inter, "Segoe UI", system-ui, -apple-system,
-            "Helvetica Neue", Arial;
-        }
+      /* Container to center content */
+      .container {
+        width: 100%;
+        max-width: 1000px;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
 
-        header {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 8px;
-        }
-        h1 {
-          margin: 0;
-          font-size: 22px;
-          color: var(--accent);
-          letter-spacing: 0.2px;
-        }
-        p.sub {
-          margin: 0;
-          color: var(--muted);
-          font-size: 13px;
-        }
+      /* Header */
+      header {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 18px;
+        width: 100%;
+      }
+      .logo {
+        width: 100px;
+        height: 100px;
+        border-radius: 12px;
+        object-fit: cover;
+      }
+      .header-text {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .header-text h1 {
+        margin: 0;
+        font-size: 28px;
+        color: var(--accent);
+        font-weight: 700;
+      }
+      .header-text p.sub {
+        margin: 0;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.4;
+      }
 
-        .controls {
-          display: flex;
-          gap: 12px;
-          align-items: center;
-        }
-        button.primary {
-          background: var(--accent);
-          border: none;
-          padding: 10px 18px;
-          border-radius: 10px;
-          font-weight: 700;
-          color: #000;
-          cursor: pointer;
-          box-shadow: 0 6px 18px rgba(0, 230, 118, 0.12);
-          transition: transform 0.12s ease, filter 0.12s;
-        }
-        button.primary:active {
-          transform: translateY(1px);
-        }
-        button.ghost {
-          background: transparent;
-          border: 1px solid rgba(255, 255, 255, 0.06);
-          padding: 8px 12px;
-          border-radius: 10px;
-          color: var(--muted);
-          cursor: pointer;
-        }
+      /* Controls */
+      .controls {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        width: 100%;
+      }
+      button.primary {
+        background: var(--accent);
+        border: none;
+        padding: 10px 18px;
+        border-radius: 10px;
+        font-weight: 700;
+        color: #000;
+        cursor: pointer;
+        box-shadow: 0 6px 18px rgba(0, 230, 118, 0.12);
+        transition: transform 0.12s ease;
+      }
+      button.primary:active {
+        transform: translateY(1px);
+      }
+      button.ghost {
+        background: transparent;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        padding: 8px 12px;
+        border-radius: 10px;
+        color: var(--muted);
+        cursor: pointer;
+      }
 
+      /* Layout */
+      .layout {
+        display: flex;
+        gap: 24px;
+        width: 100%;
+        align-items: flex-start;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+      .left {
+        flex: 1;
+        min-width: 300px;
+        background: var(--card);
+        border-radius: 14px;
+        padding: 18px;
+        box-shadow: 0 6px 30px rgba(4, 8, 12, 0.6);
+      }
+      .right {
+        width: 320px;
+        min-width: 300px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        align-items: center;
+        background: var(--card);
+        border-radius: 14px;
+        padding: 18px;
+        box-shadow: 0 6px 30px rgba(4, 8, 12, 0.6);
+      }
+
+      /* Labels */
+      #label-container {
+        display: grid;
+        grid-template-columns: 1fr 80px;
+        gap: 8px;
+        align-items: center;
+      }
+      .label-name {
+        font-size: 14px;
+        color: #cfe7db;
+      }
+      .label-bar {
+        height: 8px;
+        background: var(--glass);
+        border-radius: 6px;
+        overflow: hidden;
+        position: relative;
+      }
+      .label-fill {
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 0%;
+        background: linear-gradient(90deg, var(--accent), #ffd600);
+        border-radius: 6px;
+        transition: width 150ms linear;
+      }
+      #top-label {
+        margin-top: 16px;
+        width: 100%;
+        background: linear-gradient(
+          180deg,
+          rgba(255, 255, 255, 0.02),
+          rgba(255, 255, 255, 0.01)
+        );
+        padding: 18px;
+        border-radius: 12px;
+        text-align: center;
+        font-size: 28px;
+        font-weight: 700;
+        color: #fff;
+        box-shadow: 0 10px 30px rgba(2, 6, 10, 0.6);
+        transition: transform 0.22s cubic-bezier(0.2, 0.9, 0.3, 1),
+          box-shadow 0.22s;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+      }
+      #top-label.pulse {
+        transform: scale(1.05);
+        box-shadow: 0 18px 40px rgba(0, 230, 118, 0.12);
+      }
+      #confidence-small {
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      /* Avatar */
+      .avatar-wrap {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        padding: 14px;
+      }
+      .avatar {
+        width: 180px;
+        height: 180px;
+        border-radius: 14px;
+        background: linear-gradient(180deg, #0b0f12, #0d1216);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 12px 40px rgba(2, 6, 10, 0.6);
+        position: relative;
+        overflow: hidden;
+        transition: transform 0.2s ease;
+      }
+      .avatar.speaking {
+        transform: scale(1.2);
+      }
+      .mouth {
+        transform-origin: center;
+        transition: transform 0.08s linear;
+      }
+      .talking .mouth {
+        animation: mouthOpen 160ms infinite linear;
+      }
+      @keyframes mouthOpen {
+        0% {
+          transform: scaleY(1);
+        }
+        50% {
+          transform: scaleY(0.25);
+        }
+        100% {
+          transform: scaleY(1);
+        }
+      }
+
+      .status-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--muted);
+      }
+      .status-dot.listening {
+        background: var(--accent);
+        box-shadow: 0 6px 18px rgba(0, 230, 118, 0.08);
+      }
+
+      /* Sections */
+      section {
+        background: var(--card);
+        padding: 18px;
+        border-radius: 14px;
+        box-shadow: 0 6px 30px rgba(4, 8, 12, 0.6);
+        width: 100%;
+        margin-top: 18px;
+      }
+      section h2 {
+        margin-top: 0;
+        color: var(--accent);
+      }
+      section p {
+        color: #cfe7db;
+        line-height: 1.5;
+        margin-bottom: 12px;
+      }
+      .product-images {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        justify-content: center;
+      }
+      .product-images img {
+        width: 150px;
+        border-radius: 12px;
+        object-fit: cover;
+      }
+
+      /* Footer */
+      footer {
+        background: var(--card);
+        padding: 18px;
+        border-radius: 14px;
+        box-shadow: 0 6px 30px rgba(4, 8, 12, 0.6);
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+        color: var(--muted);
+        font-size: 14px;
+        width: 100%;
+        max-width: 1000px;
+      }
+      footer a {
+        color: var(--accent);
+        text-decoration: none;
+        font-weight: 600;
+      }
+      footer a:hover {
+        text-decoration: underline;
+      }
+      footer .line {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      /* Responsive */
+      @media (max-width: 860px) {
         .layout {
-          display: flex;
-          gap: 24px;
-          width: 100%;
-          max-width: 1000px;
-          align-items: flex-start;
-          justify-content: center;
-        }
-        .left,
-        .right {
-          background: var(--card);
-          border-radius: 14px;
-          padding: 18px;
-          box-shadow: 0 6px 30px rgba(4, 8, 12, 0.6);
-        }
-        .left {
-          flex: 1;
-          min-width: 300px;
-          max-width: 520px;
+          flex-direction: column;
+          align-items: center;
         }
         .right {
-          width: 320px;
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-          align-items: center;
-        }
-
-        /* label list */
-        #label-container {
-          display: grid;
-          grid-template-columns: 1fr 80px;
-          gap: 8px;
-          align-items: center;
-        }
-        .label-name {
-          font-size: 14px;
-          color: #cfe7db;
-        }
-        .label-bar {
-          height: 8px;
-          background: var(--glass);
-          border-radius: 6px;
-          overflow: hidden;
-          position: relative;
-        }
-        .label-fill {
-          position: absolute;
-          left: 0;
-          top: 0;
-          bottom: 0;
-          width: 0%;
-          background: linear-gradient(90deg, var(--accent), #ffd600);
-          border-radius: 6px;
-          transition: width 150ms linear;
-        }
-
-        /* top label box */
-        #top-label {
-          margin-top: 16px;
           width: 100%;
-          background: linear-gradient(
-            180deg,
-            rgba(255, 255, 255, 0.02),
-            rgba(255, 255, 255, 0.01)
-          );
-          padding: 18px;
-          border-radius: 12px;
-          text-align: center;
-          font-size: 30px;
-          font-weight: 700;
-          color: #fff;
-          box-shadow: 0 10px 30px rgba(2, 6, 10, 0.6);
-          transition: transform 0.22s cubic-bezier(0.2, 0.9, 0.3, 1),
-            box-shadow 0.22s;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 8px;
         }
-        #top-label.pulse {
-          transform: scale(1.05);
-          box-shadow: 0 18px 40px rgba(0, 230, 118, 0.12);
-        }
-
-        #confidence-small {
-          font-size: 13px;
-          color: var(--muted);
-        }
-
-        /* avatar */
-        .avatar-wrap {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 12px;
-          padding: 14px;
-        }
-        .avatar {
-          width: 180px;
-          height: 180px;
-          border-radius: 14px;
-          background: linear-gradient(180deg, #0b0f12, #0d1216);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          box-shadow: 0 12px 40px rgba(2, 6, 10, 0.6);
-          position: relative;
-          overflow: hidden;
-        }
-        /* simple face SVG container */
-        .avatar svg {
-          width: 120px;
-          height: 120px;
-          display: block;
-        }
-        /* mouth animation when talking */
-        .mouth {
-          transform-origin: center;
-          transition: transform 0.08s linear;
-        }
-        .talking .mouth {
-          animation: mouthOpen 160ms infinite linear;
-        }
-        @keyframes mouthOpen {
-          0% {
-            transform: scaleY(1);
-          }
-          50% {
-            transform: scaleY(0.25);
-          }
-          100% {
-            transform: scaleY(1);
-          }
-        }
-
-        .status-dot {
-          width: 10px;
-          height: 10px;
-          border-radius: 50%;
-          background: var(--muted);
-        }
-        .status-dot.listening {
-          background: var(--accent);
-          box-shadow: 0 6px 18px rgba(0, 230, 118, 0.08);
-        }
-
-        footer {
-          margin-top: 10px;
-          color: var(--muted);
-          font-size: 13px;
-        }
-        @media (max-width: 860px) {
-          .layout {
-            flex-direction: column;
-            align-items: center;
-          }
-          .right {
-            width: 100%;
-          }
-        }
-      </style>
-    </head>
-    <body>
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
       <header>
-        <h1>🎙️ Voice Command — Speak & Display</h1>
-        <p class="sub">
-          Recognizes voice classes and speaks the detected text. Avatar animates
-          while speaking.
-        </p>
+        <img src="logo.png" alt="YenMozhi Logo" class="logo" />
+        <div class="header-text">
+          <h1>YenMozhi — Empowering Voices</h1>
+          <p class="sub">
+            Your voice matters. Speak freely, be heard, and inspire others
+            through the power of language.
+          </p>
+        </div>
       </header>
 
       <div class="controls">
         <button class="primary" id="btnStart">Start Listening</button>
         <button class="ghost" id="btnStop">Stop</button>
         <div
-          style="display: flex; align-items: center; gap: 10px; margin-left: 8px"
+          style="
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-left: 8px;
+          "
         >
           <div class="status-dot" id="statusDot"></div>
           <div style="font-size: 13px; color: var(--muted)">Microphone</div>
@@ -281,11 +363,7 @@
               Threshold: <span id="thrLabel">0.75</span>
             </div>
           </div>
-
-          <div id="label-container" style="margin-top: 12px">
-            <!-- labels inserted here -->
-          </div>
-
+          <div id="label-container" style="margin-top: 12px"></div>
           <div id="top-label" style="margin-top: 18px">
             <div id="topText">Waiting for input...</div>
             <div id="confidence-small">—</div>
@@ -294,55 +372,12 @@
 
         <div class="right">
           <div class="avatar-wrap">
-            <div class="avatar" id="avatar">
-              <!-- inline SVG face -->
-              <svg
-                viewBox="0 0 120 120"
-                xmlns="http://www.w3.org/2000/svg"
-                aria-hidden="true"
-              >
-                <defs>
-                  <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0" stop-color="#1b7a6b" />
-                    <stop offset="1" stop-color="#00e676" />
-                  </linearGradient>
-                </defs>
-
-                <!-- face / head -->
-                <circle cx="60" cy="60" r="48" fill="#0e1416" />
-                <!-- eyes -->
-                <g fill="#dbeee7" opacity="0.95">
-                  <ellipse cx="44" cy="52" rx="6" ry="7"></ellipse>
-                  <ellipse cx="76" cy="52" rx="6" ry="7"></ellipse>
-                </g>
-                <!-- mouth group - scaleY to animate -->
-                <g transform="translate(60,78)">
-                  <rect
-                    x="-14"
-                    y="-2"
-                    width="28"
-                    height="10"
-                    rx="5"
-                    fill="#ffb4b4"
-                    class="mouth"
-                    id="mouthRect"
-                  ></rect>
-                </g>
-
-                <!-- small decorative -->
-                <circle
-                  cx="60"
-                  cy="60"
-                  r="48"
-                  fill="none"
-                  stroke="rgba(255,255,255,0.02)"
-                />
-              </svg>
-            </div>
-
+            <img src="avatar.png" alt="Avatar" class="avatar" id="avatar" />
             <div style="text-align: center">
               <div id="speakText" style="font-weight: 700"></div>
-              <div style="font-size: 13px; color: var(--muted); margin-top: 6px">
+              <div
+                style="font-size: 13px; color: var(--muted); margin-top: 6px"
+              >
                 Avatar
               </div>
             </div>
@@ -357,7 +392,7 @@
                 margin-top: 6px;
                 padding: 8px;
                 border-radius: 8px;
-                background: #222; /* Dark background */
+                background: #222;
                 border: 1px solid rgba(255, 255, 255, 0.2);
                 color: #fff;
               "
@@ -366,10 +401,53 @@
         </div>
       </div>
 
-      <footer>Project: voice-reg-modal • Built with Teachable Machine</footer>
+      <section id="about">
+        <h2>About YenMozhi</h2>
+        <p>
+          YenMozhi is a heartfelt project created to empower voices that often
+          go unheard. Our mission is to bridge communication gaps and help
+          people connect through language.
+        </p>
+        <p>
+          Every voice has a story, every story has a value. We believe in
+          inspiring individuals to speak freely, to learn, and to be confident
+          in expressing themselves.
+        </p>
+        <p>
+          Through perseverance, creativity, and technology, YenMozhi transforms
+          challenges into opportunities. This project stands as a testament to
+          hope, motivation, and the power of human expression.
+        </p>
+        <p>
+          "Your voice can change the world. Speak, inspire, and make it heard."
+        </p>
+      </section>
+
+      <section id="product-images">
+        <h2>Product Samples</h2>
+        <div class="product-images">
+          <img src="product1.jpg" alt="Sample 1" />
+          <img src="product2.jpg" alt="Sample 2" />
+          <img src="product3.jpg" alt="Sample 3" />
+        </div>
+      </section>
+
+      <footer>
+        <div>Sasikumar R</div>
+        <div>Founder and CEO, Symphonix</div>
+        <div>6369196110 | sasirajkumar7rs@gmail.com</div>
+        <div class="line">
+          <a href="https://buildwithsasi.web.app" target="_blank">Portfolio</a>
+          |
+          <a href="https://www.linkedin.com/in/sasikumar-0208-r" target="_blank"
+            >LinkedIn</a
+          >
+        </div>
+        <div>Project: YenMozhi | Built by Sasikumar R</div>
+      </footer>
 
       <script>
-        // ----- CONFIG -----
+        // Voice & ML model script remains same as previous code
         const MODEL_URL =
           "https://teachablemachine.withgoogle.com/models/GmzaS6iNB/";
         let recognizer = null;
@@ -377,9 +455,8 @@
         let threshold = 0.75;
         let lastSpoken = "";
         let lastSpokenTime = 0;
-        const cooldown = 1600; // ms between spoken outputs
+        const cooldown = 1600;
 
-        // DOM refs
         const btnStart = document.getElementById("btnStart");
         const btnStop = document.getElementById("btnStop");
         const statusDot = document.getElementById("statusDot");
@@ -392,16 +469,17 @@
         const voiceSelect = document.getElementById("voiceSelect");
         document.getElementById("thrLabel").innerText = threshold;
 
-        // Speech synthesis helpers
         let voices = [];
         function populateVoices() {
           voices = speechSynthesis.getVoices() || [];
           voiceSelect.innerHTML = "";
           voices.forEach((v, i) => {
-            const opt = document.createElement("option");
-            opt.value = i;
-            opt.innerText = `${v.name} ${v.lang ? "(" + v.lang + ")" : ""}`;
-            voiceSelect.appendChild(opt);
+            if (v.lang.includes("en") || v.lang.includes("ta")) {
+              const opt = document.createElement("option");
+              opt.value = i;
+              opt.innerText = `${v.name} (${v.lang})`;
+              voiceSelect.appendChild(opt);
+            }
           });
         }
         window.speechSynthesis.onvoiceschanged = populateVoices;
@@ -409,7 +487,7 @@
         function speak(text) {
           if (!("speechSynthesis" in window)) return;
           const now = Date.now();
-          if (now - lastSpokenTime < cooldown && text === lastSpoken) return; // cooldown for same text
+          if (now - lastSpokenTime < cooldown && text === lastSpoken) return;
 
           const ut = new SpeechSynthesisUtterance(text);
           const selected = voiceSelect.value;
@@ -418,29 +496,25 @@
           ut.rate = 1;
           ut.volume = 1;
 
-          // animate avatar during speech
-          avatar.classList.add("talking");
+          avatar.classList.add("speaking");
           speakText.innerText = text;
 
           ut.onend = () => {
-            avatar.classList.remove("talking");
-            // clear text after short delay
+            avatar.classList.remove("speaking");
             setTimeout(() => {
               if (speakText.innerText === text) speakText.innerText = "";
             }, 400);
           };
-          speechSynthesis.cancel(); // stop any pending
+          speechSynthesis.cancel();
           speechSynthesis.speak(ut);
 
           lastSpoken = text;
           lastSpokenTime = now;
         }
 
-        // create and load model
         async function createModel() {
           const checkpointURL = MODEL_URL + "model.json";
           const metadataURL = MODEL_URL + "metadata.json";
-
           const rec = speechCommands.create(
             "BROWSER_FFT",
             undefined,
@@ -451,7 +525,6 @@
           return rec;
         }
 
-        // build label UI rows
         function buildLabelUI(labels) {
           labelContainer.innerHTML = "";
           labels.forEach((lbl, i) => {
@@ -464,22 +537,11 @@
             fill.className = "label-fill";
             fill.id = "fill-" + i;
             barWrap.appendChild(fill);
-
-            // Append as two-column pair
-            const left = document.createElement("div");
-            left.style.gridColumn = "1 / 2";
-            left.appendChild(name);
-
-            const right = document.createElement("div");
-            right.style.gridColumn = "2 / 3";
-            right.appendChild(barWrap);
-
             labelContainer.appendChild(name);
             labelContainer.appendChild(barWrap);
           });
         }
 
-        // Start recognition
         async function startListening() {
           try {
             if (!recognizer) {
@@ -488,14 +550,11 @@
               buildLabelUI(classLabels);
             }
 
-            // start listening
             recognizer.listen(
               (result) => {
-                // result.scores is an array of probabilities matching classLabels
                 const scores = result.scores;
-                // update bars and compute top
-                let maxIdx = 0;
-                let maxVal = -1;
+                let maxIdx = 0,
+                  maxVal = -1;
                 for (let i = 0; i < scores.length; i++) {
                   const val = scores[i];
                   const fillEl = document.getElementById("fill-" + i);
@@ -507,18 +566,13 @@
                     maxIdx = i;
                   }
                 }
-
-                // update top label UI
                 topText.innerText = `${classLabels[maxIdx]}`;
                 confSmall.innerText = `${(maxVal * 100).toFixed(2)}%`;
-                // pulse animation
                 topLabel.classList.add("pulse");
                 setTimeout(() => topLabel.classList.remove("pulse"), 280);
 
-                // speak when confident and changed
                 if (maxVal >= threshold) {
                   const labelToSpeak = classLabels[maxIdx];
-                  // speak only if changed or cooldown passed
                   if (
                     labelToSpeak !== lastSpoken ||
                     Date.now() - lastSpokenTime > cooldown
@@ -529,7 +583,7 @@
               },
               {
                 includeSpectrogram: true,
-                probabilityThreshold: 0.01, // we manage threshold manually per topVal
+                probabilityThreshold: 0.01,
                 overlapFactor: 0.5,
                 invokeCallbackOnNoiseAndUnknown: true,
               }
@@ -542,24 +596,21 @@
           }
         }
 
-        // stop listening
         function stopListening() {
           if (recognizer) recognizer.stopListening();
           statusDot.classList.remove("listening");
-          avatar.classList.remove("talking");
+          avatar.classList.remove("speaking");
           speakText.innerText = "";
         }
 
-        // wire UI
         btnStart.addEventListener("click", async () => {
-          // request a voice list early
           populateVoices();
           await startListening();
         });
         btnStop.addEventListener("click", stopListening);
 
-        // initial voice fill
         populateVoices();
       </script>
-    </body>
-  </html>
+    </div>
+  </body>
+</html>
