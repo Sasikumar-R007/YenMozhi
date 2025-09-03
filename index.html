@@ -109,6 +109,7 @@
         display: flex;
         gap: 24px;
         width: 100%;
+        height: 80vh;
         align-items: flex-start;
         justify-content: center;
         flex-wrap: wrap;
@@ -321,12 +322,19 @@
   <body>
     <div class="container">
       <header>
-        <img src="logo.png" alt="YenMozhi Logo" class="logo" />
-        <div class="header-text">
-          <h1>YenMozhi — Empowering Voices</h1>
-          <p class="sub">
-            Your voice matters. Speak freely, be heard, and inspire others
-            through the power of language.
+        <img src="assets/YenMozhi.png" alt="YenMozhi Logo" class="logo" />
+        <div
+          class="header-text"
+          style="width: 100%; align-items: center; text-align: center"
+        >
+          <h1 style="width: 100%; text-align: center; margin: 0 auto">
+            YenMozhi
+          </h1>
+          <p
+            class="sub"
+            style="width: 100%; text-align: center; margin: 0 auto"
+          >
+            Giving a voice to interact with the World.!
           </p>
         </div>
       </header>
@@ -372,7 +380,12 @@
 
         <div class="right">
           <div class="avatar-wrap">
-            <img src="avatar.png" alt="Avatar" class="avatar" id="avatar" />
+            <img
+              src="assets/YenMozhi Use.png"
+              alt="Avatar"
+              class="avatar"
+              id="avatar"
+            />
             <div style="text-align: center">
               <div id="speakText" style="font-weight: 700"></div>
               <div
@@ -403,40 +416,86 @@
 
       <section id="about">
         <h2>About YenMozhi</h2>
+        <h3>🌟 YenMozhi – Empowering Silent Voices</h3>
         <p>
-          YenMozhi is a heartfelt project created to empower voices that often
-          go unheard. Our mission is to bridge communication gaps and help
-          people connect through language.
+          YenMozhi is more than a project—it is a lifeline, a spark of hope for
+          those whose voices have long been unheard. In a world where
+          communication is the bridge to connection, countless individuals,
+          especially children with Autism Spectrum Disorder (ASD) or speech
+          challenges, struggle silently.
         </p>
+        <h3>🧩 The Silent Struggle</h3>
         <p>
-          Every voice has a story, every story has a value. We believe in
-          inspiring individuals to speak freely, to learn, and to be confident
-          in expressing themselves.
+          Imagine a child who has never spoken a single word since birth, living
+          in a world where expressing feelings, asking for help, or simply
+          connecting with others seems impossible. For millions like them, every
+          day is a silent battle, filled with frustration, isolation, and
+          untapped potential.
         </p>
+        <h3>📊 The Need</h3>
         <p>
-          Through perseverance, creativity, and technology, YenMozhi transforms
-          challenges into opportunities. This project stands as a testament to
-          hope, motivation, and the power of human expression.
+          In India alone, millions of children face such communication barriers,
+          and without proper tools, guidance, and support, their voices remain
+          trapped within. YenMozhi exists to break these barriers—to transform
+          silence into speech, hesitation into confidence, and isolation into
+          connection.
         </p>
+        <h3>💡 How YenMozhi Helps</h3>
         <p>
-          "Your voice can change the world. Speak, inspire, and make it heard."
+          Through perseverance, creativity, and cutting-edge technology,
+          YenMozhi empowers individuals to interact with the world around them,
+          giving them the priceless gift of expression. Every word spoken, every
+          idea shared, every emotion conveyed is a triumph—a step toward
+          independence, self-confidence, and inclusion.
         </p>
+        <h3>🌱 A Message of Hope</h3>
+        <p>
+          This project stands as a testament to hope, determination, and the
+          profound power of human connection. It reminds us that every
+          individual, no matter their challenges, deserves a chance to be heard
+          and understood.
+        </p>
+        <h4>Giving a voice to interact with the world.</h4>
       </section>
 
       <section id="product-images">
         <h2>Product Samples</h2>
         <div class="product-images">
-          <img src="product1.jpg" alt="Sample 1" />
-          <img src="product2.jpg" alt="Sample 2" />
-          <img src="product3.jpg" alt="Sample 3" />
+          <img
+            src="assets/YenMozhi Device 1.png"
+            alt="Sample 1"
+            style="width: 220px"
+          />
+          <img
+            src="assets/YenMozhi Device 2.png"
+            alt="Sample 2"
+            style="width: 220px"
+          />
+          <img
+            src="assets/YenMozhi Use.png"
+            alt="Sample 3"
+            style="width: 220px"
+          />
         </div>
       </section>
 
-      <footer>
-        <div>Sasikumar R</div>
+      <footer style="align-items: center; text-align: center">
+        <div>
+          <a
+            href="https://www.linkedin.com/in/sasikumar-0208-r"
+            target="_blank"
+            style="
+              color: var(--accent);
+              font-weight: 700;
+              text-decoration: none;
+            "
+          >
+            Sasikumar R
+          </a>
+        </div>
         <div>Founder and CEO, Symphonix</div>
         <div>6369196110 | sasirajkumar7rs@gmail.com</div>
-        <div class="line">
+        <div class="line" style="justify-content: center">
           <a href="https://buildwithsasi.web.app" target="_blank">Portfolio</a>
           |
           <a href="https://www.linkedin.com/in/sasikumar-0208-r" target="_blank"
@@ -474,7 +533,12 @@
           voices = speechSynthesis.getVoices() || [];
           voiceSelect.innerHTML = "";
           voices.forEach((v, i) => {
-            if (v.lang.includes("en") || v.lang.includes("ta")) {
+            // Only include English, Tamil, and Malayalam voices
+            if (
+              v.lang.toLowerCase().includes("en") ||
+              v.lang.toLowerCase().includes("ta") ||
+              v.lang.toLowerCase().includes("ml")
+            ) {
               const opt = document.createElement("option");
               opt.value = i;
               opt.innerText = `${v.name} (${v.lang})`;
