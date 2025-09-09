@@ -1,0 +1,6 @@
+voice.py --- arduino python code
+voice2.py --- esp32 python code
+
+
+arduino_sound_toggle.ino  --- arduino board code
+esp32_sound_toggle.ino --- esp32 board normal code
