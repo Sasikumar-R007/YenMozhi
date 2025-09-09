@@ -506,6 +506,7 @@
       </footer>
 
       <script>
+        // --- Existing YenMozhi code remains unchanged ---
         // Voice & ML model script remains same as previous code
         const MODEL_URL =
           "https://teachablemachine.withgoogle.com/models/GmzaS6iNB/";
@@ -533,7 +534,6 @@
           voices = speechSynthesis.getVoices() || [];
           voiceSelect.innerHTML = "";
           voices.forEach((v, i) => {
-            // Only include English, Tamil, and Malayalam voices
             if (
               v.lang.toLowerCase().includes("en") ||
               v.lang.toLowerCase().includes("ta") ||
@@ -674,6 +674,33 @@
         btnStop.addEventListener("click", stopListening);
 
         populateVoices();
+
+        // --- NEW: Mic state follower ---
+        window.__micRunning = false;
+
+        async function syncMicState() {
+          try {
+            const res = await fetch("/api/state", { cache: "no-store" });
+            const { micState } = await res.json();
+            const shouldRun = micState === "on";
+
+            if (shouldRun && !window.__micRunning) {
+              await startListening();
+              window.__micRunning = true;
+              console.log("[YenMozhi] Mic ON");
+            } else if (!shouldRun && window.__micRunning) {
+              stopListening();
+              window.__micRunning = false;
+              console.log("[YenMozhi] Mic OFF");
+            }
+          } catch (e) {
+            console.warn("[YenMozhi] state check failed", e);
+          }
+        }
+
+        // Poll the backend once a second
+        setInterval(syncMicState, 1000);
+        syncMicState();
       </script>
     </div>
   </body>
