@@ -1,19 +1,18 @@
 #include <WiFi.h>
-#include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 
 #define SOUND_SENSOR 23   // LM393 D0 connected to GPIO23
 #define LED_PIN 2         // Onboard LED (GPIO2)
 
 // ======== WiFi Settings ========
-const char* WIFI_SSID     = "YOUR_WIFI_NAME";
-const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
+const char* WIFI_SSID     = "OnePlus Nord CE 3 Lite 5G";
+const char* WIFI_PASSWORD = "sasikumar";
 
-// ======== Server / Security ========
-const char* TOGGLE_URL    = "https://yenmozhi.vercel.app/api/toggle"; 
-const char* TOGGLE_SECRET = "YOUR_LONG_RANDOM_SECRET"; // Same as Vercel env
+// ======== Laptop Server URL (change IP to your laptop's local IP) ========
+const char* TOGGLE_URL = "http://192.168.1.105:8000/open_site"; 
 
 bool ledState = false;
+bool toggleState = false;
 unsigned long lastTrigger = 0;
 const unsigned long debounceDelay = 1000; // 1 sec gap
 
@@ -31,7 +30,9 @@ void setup() {
     delay(500);
     Serial.print(".");
   }
-  Serial.println("\nConnected to WiFi!");
+  Serial.println("\n✅ Connected to WiFi!");
+  Serial.print("ESP32 IP Address: ");
+  Serial.println(WiFi.localIP());
 }
 
 void loop() {
@@ -40,46 +41,42 @@ void loop() {
   if (soundDetected == LOW) { // LOW means sound detected
     unsigned long now = millis();
     if (now - lastTrigger > debounceDelay) {
-      ledState = !ledState;
-      digitalWrite(LED_PIN, ledState);
+      toggleState = !toggleState;  // flip state each tap
+      digitalWrite(LED_PIN, toggleState);
 
-      Serial.println("Sound Detected! Sending toggle request...");
-      sendToggleRequest();
+      if (toggleState) {
+        Serial.println("🔊 Tap detected → Sending OPEN request...");
+        sendToggleRequest("open");
+      } else {
+        Serial.println("🔊 Tap detected → Sending CLOSE request...");
+        sendToggleRequest("close");
+      }
       lastTrigger = now;
     }
   }
 }
 
-// ======== Function to send HTTPS POST ========
-void sendToggleRequest() {
+// ======== Function to send HTTP GET ========
+void sendToggleRequest(String action) {
   if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("WiFi not connected!");
+    Serial.println("❌ WiFi not connected!");
     return;
   }
-
-  WiFiClientSecure client;
-  client.setInsecure(); // Skip certificate check
 
   HTTPClient http;
-  if (!http.begin(client, TOGGLE_URL)) {
-    Serial.println("Unable to connect to server");
+  String url = String(TOGGLE_URL) + "?action=" + action;
+
+  if (!http.begin(url)) {
+    Serial.println("❌ Unable to connect to server");
     return;
   }
 
-  // Add headers
-  http.addHeader("Authorization", String("Bearer ") + TOGGLE_SECRET);
-  http.addHeader("Content-Type", "application/json");
-
-  // Send minimal payload
-  String payload = "{\"event\":\"sound_detected\"}";
-
-  int httpResponseCode = http.POST(payload);
-
+  int httpResponseCode = http.GET();
   if (httpResponseCode > 0) {
     String response = http.getString();
-    Serial.println("Server Response: " + response);
+    Serial.println("💻 Laptop Response: " + response);
   } else {
-    Serial.println("Error sending request, code: " + String(httpResponseCode));
+    Serial.println("❌ Error sending request, code: " + String(httpResponseCode));
   }
 
   http.end();
