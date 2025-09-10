@@ -4,17 +4,14 @@
 #define SOUND_SENSOR 23   // LM393 D0 connected to GPIO23
 #define LED_PIN 2         // Onboard LED (GPIO2)
 
-// ======== WiFi Settings ========
 const char* WIFI_SSID     = "OnePlus Nord CE 3 Lite 5G";
 const char* WIFI_PASSWORD = "sasikumar";
+const char* TOGGLE_URL    = "http://192.168.1.105:8000/open_site"; 
 
-// ======== Laptop Server URL (change IP to your laptop's local IP) ========
-const char* TOGGLE_URL = "http://192.168.1.105:8000/open_site"; 
-
-bool ledState = false;
 bool toggleState = false;
 unsigned long lastTrigger = 0;
-const unsigned long debounceDelay = 1000; // 1 sec gap
+const unsigned long debounceDelay = 2000; // 2 seconds gap (strong clap only)
+int lastSoundState = HIGH;
 
 void setup() {
   pinMode(SOUND_SENSOR, INPUT);
@@ -22,7 +19,6 @@ void setup() {
   digitalWrite(LED_PIN, LOW);
   Serial.begin(115200);
 
-  // Connect to WiFi
   Serial.println("Connecting to WiFi...");
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
@@ -36,27 +32,29 @@ void setup() {
 }
 
 void loop() {
-  int soundDetected = digitalRead(SOUND_SENSOR);
+  int currentState = digitalRead(SOUND_SENSOR);
 
-  if (soundDetected == LOW) { // LOW means sound detected
+  // Trigger only when HIGH -> LOW (falling edge = strong clap)
+  if (lastSoundState == HIGH && currentState == LOW) {
     unsigned long now = millis();
     if (now - lastTrigger > debounceDelay) {
-      toggleState = !toggleState;  // flip state each tap
+      toggleState = !toggleState;
       digitalWrite(LED_PIN, toggleState);
 
       if (toggleState) {
-        Serial.println("🔊 Tap detected → Sending OPEN request...");
+        Serial.println("🔊 Strong Tap → OPEN website...");
         sendToggleRequest("open");
       } else {
-        Serial.println("🔊 Tap detected → Sending CLOSE request...");
+        Serial.println("🔊 Strong Tap → CLOSE website...");
         sendToggleRequest("close");
       }
       lastTrigger = now;
     }
   }
+
+  lastSoundState = currentState;
 }
 
-// ======== Function to send HTTP GET ========
 void sendToggleRequest(String action) {
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println("❌ WiFi not connected!");

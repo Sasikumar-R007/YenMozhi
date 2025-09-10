@@ -1,27 +1,48 @@
-from flask import Flask, request
+from flask import Flask, request, jsonify
 import os
+import subprocess
 
 app = Flask(__name__)
 
+# Track current state
+current_state = {
+    "browser": "off",
+    "mic": "off"
+}
+
+# Change this to your actual site
+SITE_URL = "http://yenmozhi.vercel.app"
+
 @app.route("/open_site")
 def open_site():
-    action = request.args.get("action")
+    global current_state
+    action = request.args.get("action", "open")
 
     if action == "open":
-        # Open website in default browser (Windows)
-        os.system("start chrome http://yenmozhi.vercel.app")  # Chrome
-        # os.system("start msedge http://yenmozhi.vercel.app")  # Edge (use if needed)
-        return "Website opened!"
+        # Open Edge only if not already open
+        if current_state["browser"] == "off":
+            subprocess.Popen(["start", "msedge", SITE_URL], shell=True)
+            current_state["browser"] = "on"
+            current_state["mic"] = "on"
+            return "✅ Website opened + Mic ON"
+        else:
+            return "⚠️ Website already open"
 
     elif action == "close":
-        # Force close Chrome/Edge
-        os.system("taskkill /im chrome.exe /f")
-        os.system("taskkill /im msedge.exe /f")
-        return "Website closed!"
+        # Kill all Edge processes
+        os.system("taskkill /im msedge.exe /f >nul 2>&1")
+        current_state["browser"] = "off"
+        current_state["mic"] = "off"
+        return "🛑 Website closed + Mic OFF"
 
-    return "Invalid action!"
+    return "⚠️ Invalid action"
+
+
+@app.route("/api/state")
+def api_state():
+    return jsonify({"micState": current_state["mic"]})
 
 
 if __name__ == "__main__":
-    # Run on all interfaces so ESP32 can access
+    print("✅ Flask server running at http://0.0.0.0:8000")
     app.run(host="0.0.0.0", port=8000)
